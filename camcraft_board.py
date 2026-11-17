@@ -153,7 +153,7 @@ def card(p):
         pills.insert(0, f'<span class="pill {"red" if pr_p in ("P1", "P2") else ("orange" if pr_p == "P3" else "grey")}">{pr_p}</span>')
     return (f'<a class="card" data-p="{esc(pr_p)}" data-k="{esc(("#" + str(p["number"]) + " " + p["author"]["login"] + " " + t).lower())}" '
             f'href="{esc(p["url"])}"><div class="num">#{p["number"]} '
-            f'<span class="who">{esc(p["author"]["login"])} · {ago(p["updatedAt"])} ago</span></div>'
+            f'<span class="who">{esc(p["author"]["login"])} · opened {ago(p["createdAt"])} ago · updated {ago(p["updatedAt"])} ago</span></div>'
             f'<div class="t">{esc(t)}</div><div class="pills">{"".join(pills)}</div></a>')
 
 

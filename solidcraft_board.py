@@ -38,7 +38,7 @@ def days_since(ts):
 
 esc = lambda s: html.escape(str(s or ""))
 prs = gh("pr", "list", "-R", R, "--state", "open", "--limit", "1000", "--json",
-         "number,title,author,isDraft,labels,mergeable,reviewDecision,updatedAt,url,baseRefName,closingIssuesReferences")
+         "number,title,author,isDraft,labels,mergeable,reviewDecision,createdAt,updatedAt,url,baseRefName,closingIssuesReferences")
 PRIOS = ["P0", "P1", "P2", "P3"]
 ISSUE_PRIO: dict[int, str] = {}
 for _p in PRIOS:                                  # issues by priority label (search, one call per level)
@@ -92,7 +92,7 @@ def card(p):
     old = "old" if days_since(p["updatedAt"]) > 14 else ""
     who = p["author"]["login"]
     return (f'<a class="card {old}" data-p="{pr_p}" data-who="{esc(who.lower())}" data-t="{esc(("#" + str(p["number"]) + " " + p["title"]).lower())}" href="{esc(p["url"])}">'
-            f'<div class="num">#{p["number"]:,} <span class="who">{esc(who)} · {ago(p["updatedAt"])} ago</span></div>'
+            f'<div class="num">#{p["number"]:,} <span class="who">{esc(who)} · opened {ago(p["createdAt"])} ago · updated {ago(p["updatedAt"])} ago</span></div>'
             f'<div class="t">{esc(p["title"])}</div><div class="pills">{"".join(pills)}</div></a>')
 
 
