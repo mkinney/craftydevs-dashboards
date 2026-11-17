@@ -10,15 +10,6 @@ OUT = os.path.expanduser(os.environ.get("CAMCRAFT_BOARD_OUT", "~/dashboards/camc
 DEST = os.environ.get("CAMCRAFT_BOARD_DEST", "")
 
 
-
-def publish(path: str, dest: str) -> int:
-    """Copy the page to DEST (an rsync target such as user@host:public_html/status/index.html); no DEST = keep local."""
-    if not dest:
-        print(f"wrote {path} (set the DEST variable to publish it)")
-        return 0
-    return subprocess.run(["rsync", "-q", "-e", "ssh -o BatchMode=yes", path, dest], capture_output=True, text=True,
-                          timeout=60).returncode
-
 def gh(*args):
     r = subprocess.run([GH, *args], capture_output=True, text=True, timeout=60)
     if r.returncode != 0:
@@ -38,12 +29,37 @@ def ago(ts):
     return f"{int(s // 86400)}d"
 
 
+def publish(path: str, dest: str) -> int:
+    """Copy the page to DEST (an rsync target such as user@host:public_html/status/index.html); no DEST = keep local."""
+    if not dest:
+        print(f"wrote {path} (set the DEST variable to publish it)")
+        return 0
+    return subprocess.run(["rsync", "-q", "-e", "ssh -o BatchMode=yes", path, dest], capture_output=True, text=True,
+                          timeout=60).returncode
+
 def esc(s):
     return html.escape(str(s or ""))
 
 
 prs = gh("pr", "list", "-R", R, "--state", "open", "--limit", "300", "--json",
-         "number,title,author,isDraft,labels,mergeable,headRefOid,createdAt,updatedAt,reviews,comments,url,baseRefName,statusCheckRollup")
+         "number,title,author,isDraft,labels,mergeable,headRefOid,createdAt,updatedAt,reviews,comments,url,baseRefName,statusCheckRollup,closingIssuesReferences")
+PRIOS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P?"]
+try:
+    _iss = gh("issue", "list", "-R", R, "--state", "all", "--limit", "1500", "--search", "sort:updated-desc",
+              "--json", "number,labels")
+except Exception:
+    _iss = []
+ISSUE_PRIO = {i["number"]: next((l["name"] for l in i["labels"] if l["name"] in PRIOS), "") for i in _iss}
+
+
+def pr_prio(p) -> str:
+    """The PR's priority: its own P label, else the best P label of the issues it closes; "none" if neither."""
+    own = [l["name"] for l in p.get("labels", []) if l["name"] in PRIOS]
+    linked = [ISSUE_PRIO.get(c.get("number"), "") for c in (p.get("closingIssuesReferences") or [])]
+    found = [x for x in own + linked if x]
+    return min(found, key=PRIOS.index) if found else "none"
+
+
 merged = gh("pr", "list", "-R", R, "--state", "merged", "--limit", "15", "--json", "number,title,author,mergedAt,url")
 bugs = gh("issue", "list", "-R", R, "--state", "open", "--limit", "100", "--search", "label:P1,P2,P3",
           "--json", "number,title,labels,assignees,url,updatedAt")
@@ -109,8 +125,6 @@ def card(p):
     pills = []
     if feat:
         pills.append('<span class="pill grey">feat · at cut</span>')
-    if "P1" in L or "P2" in L:
-        pills.append('<span class="pill red">P1/P2</span>')
     if p.get("mergeable") == "CONFLICTING":
         pills.append('<span class="pill orange">conflicting</span>')
     if reviewed(p):
@@ -134,7 +148,11 @@ def card(p):
         pills.append(f'<span class="pill act">{icon} {esc(a)}</span>')
     if p["baseRefName"] != "main":
         pills.append(f'<span class="pill grey">stacked on {esc(p["baseRefName"])}</span>')
-    return (f'<a class="card" href="{esc(p["url"])}"><div class="num">#{p["number"]} '
+    pr_p = pr_prio(p)
+    if pr_p != "none":
+        pills.insert(0, f'<span class="pill {"red" if pr_p in ("P1", "P2") else ("orange" if pr_p == "P3" else "grey")}">{pr_p}</span>')
+    return (f'<a class="card" data-p="{esc(pr_p)}" data-k="{esc(("#" + str(p["number"]) + " " + p["author"]["login"] + " " + t).lower())}" '
+            f'href="{esc(p["url"])}"><div class="num">#{p["number"]} '
             f'<span class="who">{esc(p["author"]["login"])} · {ago(p["updatedAt"])} ago</span></div>'
             f'<div class="t">{esc(t)}</div><div class="pills">{"".join(pills)}</div></a>')
 
@@ -178,7 +196,8 @@ def bug_row(b):
     L = [l["name"] for l in b["labels"]]
     pr = next((x for x in L if x in ("P1", "P2", "P3")), "")
     st = "in review" if "in-review" in L else ("claimed" if "claimed" in L else ("blocked" if "blocked" in L else "open"))
-    return (f'<tr><td><span class="pill {"red" if pr in ("P1","P2") else "orange"}">{pr}</span></td>'
+    return (f'<tr class="bug" data-p="{pr}" data-k="{esc(("#" + str(b["number"]) + " " + " ".join(a["login"] for a in b.get("assignees", [])) + " " + b["title"]).lower())}">'
+            f'<td><span class="pill {"red" if pr in ("P1","P2") else "orange"}">{pr}</span></td>'
             f'<td><a href="{esc(b["url"])}">#{b["number"]}</a> {esc(b["title"])}</td><td>{st}</td></tr>')
 
 bugs_html = "".join(bug_row(b) for b in sorted(bugs, key=lambda b: ([l["name"] for l in b["labels"] if l["name"] in ("P1","P2","P3")] or ["P9"])[0]))
@@ -188,7 +207,7 @@ merged_html = "".join(f'<tr><td><a href="{esc(m["url"])}">#{m["number"]}</a> {es
 nowiso = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CamCraft PR status</title><style>.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
+<title>CamCraft PR status</title><style>.filters{{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}}.filters input[type=search]{{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;min-width:240px;flex:1 1 240px;max-width:420px}}.fp{{display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer}}#fclear{{padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;cursor:pointer}}.hide{{display:none!important}}.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
 :root{{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--fg:#1d2228;--mut:#667;--line:#e2e5ea;
 --green:#1f9d55;--blue:#2f6fde;--red:#d64545;--orange:#e07b14;--yellow:#c9a400;--grey:#8a94a3}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#111418;--card:#1b2026;--fg:#e6e9ee;--mut:#9aa3ad;--line:#2a3038}}}}
@@ -208,12 +227,13 @@ h1{{font-size:18px;margin:0 12px 0 0}}.upd{{color:var(--mut);margin-left:auto}}
 table{{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}}
 td{{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}}a{{color:var(--blue)}}h3{{font-size:13px;color:var(--mut);margin:8px 0}}
 </style></head><body>
-<header><h1>CamCraft PRs</h1><label class="ar" tabindex="0" data-tip="Reloads this page every minute to show the latest published copy. It does not fetch new data from GitHub: the page itself is rebuilt on the server every minute."><input type="checkbox" id="ar"> Auto refresh</label><a class="main" href="stats.html">Stats</a>{main_html}{rel_html}{strip()}<span class="upd">{len(prs)} open · updated {now}<span class="ago" data-ts="{nowiso}"></span></span><a class="gh" href="https://github.com/mkinney/craftydevs-dashboards" title="Source of these pages on GitHub" aria-label="Source of these pages on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header>
+<header><h1>CamCraft PRs</h1><label class="ar" tabindex="0" data-tip="Reloads this page every minute to show the latest published copy. It does not fetch new data from GitHub: the page itself is rebuilt on the server every minute."><input type="checkbox" id="ar"> Auto refresh</label><a class="main" href="stats.html">Stats</a>{main_html}{rel_html}{strip()}<span class="upd">{len(prs)} open · updated {now}<span class="ago" data-ts="{nowiso}"></span></span><a class="gh" href="https://github.com/mkinney/craftydevs-dashboards" title="Source of these pages on GitHub" aria-label="Source of these pages on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header><div class="filters"><input id="fq" type="search" placeholder="Filter: PR #, submitter or title" aria-label="Filter PRs"><label class="fp"><input type="checkbox" value="P1">P1</label><label class="fp"><input type="checkbox" value="P2">P2</label><label class="fp"><input type="checkbox" value="P3">P3</label><label class="fp"><input type="checkbox" value="P4">P4</label><label class="fp"><input type="checkbox" value="P5">P5</label><label class="fp"><input type="checkbox" value="P6">P6</label><label class="fp"><input type="checkbox" value="P7">P7</label><label class="fp"><input type="checkbox" value="P8">P8</label><label class="fp"><input type="checkbox" value="P9">P9</label><label class="fp"><input type="checkbox" value="P?">P?</label><label class="fp"><input type="checkbox" value="none">none</label><button id="fclear" type="button">Clear</button><span id="fcount" class="mut"></span></div>
 <div class="board">{board}</div>
 <div class="wrap"><div><h3>Open P1–P3 bugs ({len(bugs)})</h3><table>{bugs_html}</table></div>
 <div><h3>Recently merged</h3><table>{merged_html}</table></div></div>
-<script>(function(){{function t(){{document.querySelectorAll(".ago").forEach(function(e){{var m=Math.max(0,Math.round((Date.now()-Date.parse(e.dataset.ts))/60000));e.textContent=" · "+(m<1?"just now":m<60?m+" minute"+(m==1?"":"s")+" ago":Math.floor(m/60)+" h "+(m%60)+" min ago");}});}}t();setInterval(t,30000);}})();</script><script>(function(){{var k="autoRefresh",b=document.getElementById("ar"),t=null;function on(){{try{{return localStorage.getItem(k)!=="0"}}catch(e){{return true}}}}function set(v){{try{{localStorage.setItem(k,v?"1":"0")}}catch(e){{}}}}function arm(){{clearInterval(t);if(b.checked)t=setInterval(function(){{location.reload()}},60000)}}b.checked=on();arm();b.onchange=function(){{set(b.checked);arm()}};}})();</script></body></html>"""
+<script>(function(){{function t(){{document.querySelectorAll(".ago").forEach(function(e){{var m=Math.max(0,Math.round((Date.now()-Date.parse(e.dataset.ts))/60000));e.textContent=" · "+(m<1?"just now":m<60?m+" minute"+(m==1?"":"s")+" ago":Math.floor(m/60)+" h "+(m%60)+" min ago");}});}}t();setInterval(t,30000);}})();</script><script>(function(){{var k="autoRefresh",b=document.getElementById("ar"),t=null;function on(){{try{{return localStorage.getItem(k)!=="0"}}catch(e){{return true}}}}function set(v){{try{{localStorage.setItem(k,v?"1":"0")}}catch(e){{}}}}function arm(){{clearInterval(t);if(b.checked)t=setInterval(function(){{location.reload()}},60000)}}b.checked=on();arm();b.onchange=function(){{set(b.checked);arm()}};}})();</script><script>(function(){{var q=document.getElementById("fq"),boxes=[].slice.call(document.querySelectorAll(".fp input")),cnt=document.getElementById("fcount"),K="cc-board-filter";function save(){{try{{localStorage.setItem(K,JSON.stringify({{q:q.value,p:boxes.filter(function(b){{return b.checked}}).map(function(b){{return b.value}})}}))}}catch(e){{}}}}function load(){{var u=new URLSearchParams(location.search);try{{var d=JSON.parse(localStorage.getItem(K)||"{{}}");if(d.q)q.value=d.q;(d.p||[]).forEach(function(v){{boxes.forEach(function(b){{if(b.value==v)b.checked=true}})}})}}catch(e){{}}if(u.get("q")!==null)q.value=u.get("q");if(u.get("p")){{var ps=u.get("p").split(",");boxes.forEach(function(b){{b.checked=ps.indexOf(b.value)>=0}})}}}}function apply(){{var v=q.value.trim().toLowerCase(),ps=boxes.filter(function(b){{return b.checked}}).map(function(b){{return b.value}}),shown=0,total=0;document.querySelectorAll("[data-k]").forEach(function(e){{var ok=(!v||e.dataset.k.indexOf(v)>=0)&&(!ps.length||ps.indexOf(e.dataset.p)>=0);e.classList.toggle("hide",!ok);if(e.classList.contains("card")){{total++;if(ok)shown++}}}});document.querySelectorAll("section.col").forEach(function(c){{var n=c.querySelector("h2 .n");if(n)n.textContent=c.querySelectorAll(".card:not(.hide)").length}});cnt.textContent=(v||ps.length)?("showing "+shown+" of "+total+" PRs"):"";save()}}q.addEventListener("input",apply);boxes.forEach(function(b){{b.addEventListener("change",apply)}});document.getElementById("fclear").onclick=function(){{q.value="";boxes.forEach(function(b){{b.checked=false}});apply()}};load();apply()}})();</script></body></html>"""
 
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 tmp = OUT + ".tmp"
 open(tmp, "w").write(page)
