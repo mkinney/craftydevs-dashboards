@@ -122,8 +122,8 @@ closed_list = "".join(
     f'<li><a href="{esc(i["url"])}">#{i["number"]}</a> {esc(i["title"])} <span class="mut">'
     f'{"not planned" if i.get("stateReason") == "NOT_PLANNED" else "completed"} · {ago(i["closedAt"])} ago</span></li>'
     for i in sorted(closed_today, key=lambda i: i["closedAt"], reverse=True))
-pchecks = "".join(f'<label class="fp" title="{esc(PDESC[p])}"><input type="checkbox" value="{esc(p)}" checked>{esc(p)}</label>' for p in PRIOS)
-schecks = "".join(f'<label class="fs" title="{esc(t)}"><input type="checkbox" value="{s}" checked>{s}</label>' for s, t in STATES)
+pchecks = "".join(f'<label class="fp" title="{esc(PDESC[p])}"><input type="checkbox" value="{esc(p)}">{esc(p)}</label>' for p in PRIOS)
+schecks = "".join(f'<label class="fs" title="{esc(t)}"><input type="checkbox" value="{s}">{s}</label>' for s, t in STATES)
 now = dt.datetime.now(dt.timezone.utc)
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CamCraft issues</title><style>
@@ -135,7 +135,8 @@ main{{max-width:1100px;margin:0 auto;padding:16px}}a{{color:var(--acc);text-deco
 header{{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline}}h1{{margin:0;font-size:22px}}.mut{{color:var(--mut)}}
 .kpis{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0}}
 .kpis div{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px}}.kpis b{{display:block;font-size:22px}}.kpis span{{color:var(--mut);font-size:12px}}
-.bar{{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:10px 0}}#fq{{flex:1 1 220px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}}
+.bar{{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:10px 0}}#fclear{{padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);cursor:pointer}}
+#fq{{flex:1 1 220px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg)}}
 .fp,.fs{{font-size:12px;white-space:nowrap}}h2{{font-size:15px;margin:18px 0 6px}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}}
 .num{{font-weight:600}}.ttl{{color:var(--fg)}}.meta{{margin-top:3px;font-size:12px}}
@@ -152,20 +153,21 @@ details{{background:var(--card);border:1px solid var(--line);border-radius:10px;
 <div class="kpis">{"".join(f"<div><b>{n:,}</b><span>{esc(t)}</span></div>" for n, t in kpis)}</div>
 <details><summary>Issues closed today (UTC): {len(closed_today)}</summary><ul>{closed_list or "<li class='mut'>none yet</li>"}</ul></details>
 <div class="bar"><input id="fq" type="search" placeholder="Filter: #number, words in the title, author, assignee, label" aria-label="Filter issues">{pchecks}</div>
-<div class="bar">{schecks}</div>
+<div class="bar">{schecks}<button id="fclear" type="button">Clear</button><span id="fcount" class="mut"></span></div>
 {sections}
 </main><script>
-const q=document.getElementById('fq');
-function f(){{const t=q.value.trim().toLowerCase().split(/\\s+/).filter(Boolean);
-const P=new Set([...document.querySelectorAll('.fp input:checked')].map(x=>x.value));
-const S=new Set([...document.querySelectorAll('.fs input:checked')].map(x=>x.value));
-document.querySelectorAll('.card').forEach(c=>{{c.hidden=!(P.has(c.dataset.p)&&S.has(c.dataset.s)&&t.every(w=>c.dataset.t.includes(w)))}});
-document.querySelectorAll('section').forEach(s=>{{s.hidden=![...s.querySelectorAll('.card')].some(c=>!c.hidden)}});
-try{{localStorage.setItem('cc-issues-f',JSON.stringify({{q:q.value,P:[...P],S:[...S]}}))}}catch(e){{}}}}
-try{{const v=JSON.parse(localStorage.getItem('cc-issues-f')||'null');if(v){{q.value=v.q||'';
-document.querySelectorAll('.fp input').forEach(x=>x.checked=v.P.includes(x.value));
-document.querySelectorAll('.fs input').forEach(x=>x.checked=v.S.includes(x.value))}}}}catch(e){{}}
-q.addEventListener('input',f);document.querySelectorAll('.fp input,.fs input').forEach(x=>x.addEventListener('change',f));f();
+const q=document.getElementById('fq'),K='cc-issues-f2';
+const PB=[...document.querySelectorAll('.fp input')],SB=[...document.querySelectorAll('.fs input')];
+const on=bs=>bs.filter(b=>b.checked).map(b=>b.value);
+function f(){{const t=q.value.trim().toLowerCase().split(/\\s+/).filter(Boolean),P=on(PB),S=on(SB);
+ let n=0,all=0;document.querySelectorAll('.card').forEach(c=>{{all++;const ok=(!P.length||P.includes(c.dataset.p))&&(!S.length||S.includes(c.dataset.s))&&t.every(w=>c.dataset.t.includes(w));c.hidden=!ok;n+=ok}});
+ document.querySelectorAll('section').forEach(s=>{{s.hidden=![...s.querySelectorAll('.card')].some(c=>!c.hidden)}});
+ document.getElementById('fcount').textContent=(t.length||P.length||S.length)?` showing ${{n}} of ${{all}} issues`:'';
+ try{{localStorage.setItem(K,JSON.stringify({{q:q.value,P,S}}))}}catch(e){{}}}}
+try{{const v=JSON.parse(localStorage.getItem(K)||'null');if(v){{q.value=v.q||'';PB.forEach(b=>b.checked=(v.P||[]).includes(b.value));SB.forEach(b=>b.checked=(v.S||[]).includes(b.value))}}}}catch(e){{}}
+const u=new URLSearchParams(location.search);if(u.get('q')!==null)q.value=u.get('q');if(u.get('p'))PB.forEach(b=>b.checked=u.get('p').split(',').includes(b.value));
+document.getElementById('fclear').onclick=()=>{{q.value='';PB.concat(SB).forEach(b=>b.checked=false);f()}};
+q.addEventListener('input',f);PB.concat(SB).forEach(x=>x.addEventListener('change',f));f();
 </script></body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT + ".tmp", "w").write(page)
