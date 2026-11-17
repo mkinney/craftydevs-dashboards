@@ -106,7 +106,7 @@ nowr = "<tr class='now'><td>Open now</td>" + "".join(f"<td>{open_prio[p]:,}</td>
 now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 nowiso = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SolidCraft stats</title><style>
+<title>SolidCraft stats</title><style>.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}
 :root{{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--fg:#1d2228;--mut:#667;--line:#e2e5ea}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#111418;--card:#1b2026;--fg:#e6e9ee;--mut:#9aa3ad;--line:#2a3038}}}}
 body{{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}}
@@ -122,7 +122,7 @@ th:first-child,td:first-child{{text-align:left}}tr.now td{{font-weight:600}}th{{
 .tip:hover::after,.tip:focus::after{{content:attr(data-tip);position:absolute;top:1.6em;z-index:5;width:220px;white-space:normal;text-align:left;font-weight:400;font-size:12px;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg)}}
 .tip.tl::after{{left:-8px}}.tip.tr::after{{right:-8px}}
 </style></head><body>
-<header><h1>SolidCraft stats</h1><a href="./">← PR board</a><a href="https://tangency-labs.github.io/leaderboard/">Leaderboard</a><span class="mut">updated {now}<span class="ago" data-ts="{nowiso}"></span> (hourly, from GitHub search counts)</span></header>
+<header><h1>SolidCraft stats</h1><a href="./">← PR board</a><a href="https://tangency-labs.github.io/leaderboard/">Leaderboard</a><span class="mut">updated {now}<span class="ago" data-ts="{nowiso}"></span> (hourly, from GitHub search counts)</span><a class="gh" href="https://github.com/mkinney/craftydevs-dashboards" title="Source of these pages on GitHub" aria-label="Source of these pages on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header>
 <main>
 <section><h2>Merge velocity: PRs merged per day (last {DAYS} days)</h2>{velocity()}</section>
 <section><h2>PRs per week: opened / merged</h2>{prs_w}</section>

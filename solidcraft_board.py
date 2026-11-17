@@ -87,7 +87,7 @@ now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 nowiso = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SolidCraft PR status</title><style>.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
+<title>SolidCraft PR status</title><style>.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
 :root{{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--fg:#1d2228;--mut:#667;--line:#e2e5ea;
 --green:#1f9d55;--teal:#0f8b8d;--blue:#2f6fde;--red:#d64545;--orange:#e07b14;--grey:#8a94a3}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#111418;--card:#1b2026;--fg:#e6e9ee;--mut:#9aa3ad;--line:#2a3038}}}}
@@ -110,7 +110,7 @@ td{{padding:6px 8px;border-top:1px solid var(--line)}}a{{color:var(--blue)}}h3{{
 <header><h1>SolidCraft PRs</h1><label class="ar" tabindex="0" data-tip="Reloads this page every minute to show the latest published copy. It does not fetch new data from GitHub: the page itself is rebuilt on the server every 15 minutes."><input type="checkbox" id="ar"> Auto refresh</label><a class="btn" href="stats.html">Stats</a><a class="btn" href="https://tangency-labs.github.io/leaderboard/">Leaderboard</a>
 <button id="b14" class="on">Active 14 days ({active:,})</button><button id="ball">All open ({len(prs):,})</button>
 <input id="q" placeholder="Filter: author or title" size="22">
-<span class="upd">updated {now}<span class="ago" data-ts="{nowiso}"></span> · every 15 min</span></header>
+<span class="upd">updated {now}<span class="ago" data-ts="{nowiso}"></span> · every 15 min</span><a class="gh" href="https://github.com/mkinney/craftydevs-dashboards" title="Source of these pages on GitHub" aria-label="Source of these pages on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header>
 <div class="board">{board}</div>
 <div class="wrap"><h3>Recently merged</h3><table>{mrows}</table></div>
 <script>
