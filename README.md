@@ -48,4 +48,4 @@ To point a page at another repository, change the repository constant at the top
 
 ## License
 
-MIT - see `LICENSE`.
+MIT OR Apache-2.0, at your option (the same as SolidCraft): see `LICENSE-MIT` and `LICENSE-APACHE`.
