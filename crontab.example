@@ -1,0 +1,11 @@
+# Example crontab. lockf (macOS) / flock (Linux) stops a slow run from overlapping the next one.
+# Put the DEST variables here or in your shell profile.
+CAMCRAFT_BOARD_DEST=user@host:public_html/camcraft/status/index.html
+CAMCRAFT_STATS_DEST=user@host:public_html/camcraft/status/stats.html
+SOLIDCRAFT_BOARD_DEST=user@host:public_html/solidcraft/status/index.html
+SOLIDCRAFT_STATS_DEST=user@host:public_html/solidcraft/status/stats.html
+
+* * * * *    flock -n /tmp/cc-board.lock  python3 $HOME/craftydevs-dashboards/camcraft_board.py   >> $HOME/dashboards/cron.log 2>&1
+17 * * * *   flock -n /tmp/cc-stats.lock  python3 $HOME/craftydevs-dashboards/camcraft_stats.py   >> $HOME/dashboards/cron.log 2>&1
+*/15 * * * * flock -n /tmp/sc-board.lock  python3 $HOME/craftydevs-dashboards/solidcraft_board.py >> $HOME/dashboards/cron.log 2>&1
+43 * * * *   flock -n /tmp/sc-stats.lock  python3 $HOME/craftydevs-dashboards/solidcraft_stats.py >> $HOME/dashboards/cron.log 2>&1
