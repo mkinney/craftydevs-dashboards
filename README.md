@@ -49,3 +49,5 @@ To point a page at another repository, change the repository constant at the top
 ## License
 
 MIT OR Apache-2.0, at your option (the same as SolidCraft): see `LICENSE-MIT` and `LICENSE-APACHE`.
+
+- `camcraft_issues.py`: CamCraft open issues by priority, with a keyword filter, priority and state checkboxes, and today's opened/closed counts (UTC). Settings: `CAMCRAFT_ISSUES_OUT`, `CAMCRAFT_ISSUES_DEST`.

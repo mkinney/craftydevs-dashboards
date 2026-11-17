@@ -9,3 +9,4 @@ SOLIDCRAFT_STATS_DEST=user@host:public_html/solidcraft/status/stats.html
 17 * * * *   flock -n /tmp/cc-stats.lock  python3 $HOME/craftydevs-dashboards/camcraft_stats.py   >> $HOME/dashboards/cron.log 2>&1
 */15 * * * * flock -n /tmp/sc-board.lock  python3 $HOME/craftydevs-dashboards/solidcraft_board.py >> $HOME/dashboards/cron.log 2>&1
 43 * * * *   flock -n /tmp/sc-stats.lock  python3 $HOME/craftydevs-dashboards/solidcraft_stats.py >> $HOME/dashboards/cron.log 2>&1
+*/5 * * * * CAMCRAFT_ISSUES_DEST=user@host:path/issues.html python3 /path/to/camcraft_issues.py
