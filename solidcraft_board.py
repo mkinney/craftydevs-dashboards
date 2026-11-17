@@ -10,6 +10,14 @@ OUT = os.path.expanduser(os.environ.get("SOLIDCRAFT_BOARD_OUT", "~/dashboards/so
 DEST = os.environ.get("SOLIDCRAFT_BOARD_DEST", "")
 
 
+def publish(path: str, dest: str) -> int:
+    """Copy the page to DEST (an rsync target such as user@host:public_html/status/index.html); no DEST = keep local."""
+    if not dest:
+        print(f"wrote {path} (set the DEST variable to publish it)")
+        return 0
+    return subprocess.run(["rsync", "-q", "-e", "ssh -o BatchMode=yes", path, dest], capture_output=True, text=True,
+                          timeout=60).returncode
+
 def gh(*a):
     r = subprocess.run([GH, *a], capture_output=True, text=True, timeout=300)
     if r.returncode:
@@ -28,18 +36,28 @@ def days_since(ts):
     return (dt.datetime.now(dt.timezone.utc) - t).days
 
 
-
-def publish(path: str, dest: str) -> int:
-    """Copy the page to DEST (an rsync target such as user@host:public_html/status/index.html); no DEST = keep local."""
-    if not dest:
-        print(f"wrote {path} (set the DEST variable to publish it)")
-        return 0
-    return subprocess.run(["rsync", "-q", "-e", "ssh -o BatchMode=yes", path, dest], capture_output=True, text=True,
-                          timeout=60).returncode
-
 esc = lambda s: html.escape(str(s or ""))
 prs = gh("pr", "list", "-R", R, "--state", "open", "--limit", "1000", "--json",
-         "number,title,author,isDraft,labels,mergeable,reviewDecision,updatedAt,url,baseRefName")
+         "number,title,author,isDraft,labels,mergeable,reviewDecision,updatedAt,url,baseRefName,closingIssuesReferences")
+PRIOS = ["P0", "P1", "P2", "P3"]
+ISSUE_PRIO: dict[int, str] = {}
+for _p in PRIOS:                                  # issues by priority label (search, one call per level)
+    try:
+        for i in gh("issue", "list", "-R", R, "--state", "all", "--limit", "1000", "--label", f"priority:{_p}",
+                    "--json", "number"):
+            ISSUE_PRIO.setdefault(i["number"], _p)
+    except Exception:
+        pass
+
+
+def pr_prio(p) -> str:
+    """The PR's priority: its own priority:Pn label, else the best one of the issues it closes; "none" if neither."""
+    own = [l["name"].split(":", 1)[1] for l in p["labels"] if l["name"].startswith("priority:")]
+    linked = [ISSUE_PRIO.get(c.get("number"), "") for c in (p.get("closingIssuesReferences") or [])]
+    found = [x for x in own + linked if x in PRIOS]
+    return min(found, key=PRIOS.index) if found else "none"
+
+
 merged = gh("pr", "list", "-R", R, "--state", "merged", "--limit", "15", "--json", "number,title,author,mergedAt,url")
 
 COLS = [("ready", "Ready to merge", "green"), ("approved", "Approved", "teal"), ("review", "Waiting for review", "blue"),
@@ -64,7 +82,8 @@ for p in prs:
 
 def card(p):
     L = [l["name"] for l in p["labels"]]
-    pills = [f'<span class="pill red">{esc(x.split(":")[1])}</span>' for x in L if x.startswith("priority:")]
+    pr_p = pr_prio(p)
+    pills = [f'<span class="pill {"red" if pr_p in ("P0", "P1") else ("orange" if pr_p == "P2" else "grey")}">{pr_p}</span>'] if pr_p != "none" else []
     pills += [f'<span class="pill grey">{esc(x[5:])}</span>' for x in L if x.startswith("area:")]
     if p.get("mergeable") == "CONFLICTING":
         pills.append('<span class="pill orange">conflicting</span>')
@@ -72,7 +91,7 @@ def card(p):
         pills.append(f'<span class="pill grey">into {esc(p["baseRefName"])}</span>')
     old = "old" if days_since(p["updatedAt"]) > 14 else ""
     who = p["author"]["login"]
-    return (f'<a class="card {old}" data-who="{esc(who.lower())}" data-t="{esc(p["title"].lower())}" href="{esc(p["url"])}">'
+    return (f'<a class="card {old}" data-p="{pr_p}" data-who="{esc(who.lower())}" data-t="{esc(("#" + str(p["number"]) + " " + p["title"]).lower())}" href="{esc(p["url"])}">'
             f'<div class="num">#{p["number"]:,} <span class="who">{esc(who)} · {ago(p["updatedAt"])} ago</span></div>'
             f'<div class="t">{esc(p["title"])}</div><div class="pills">{"".join(pills)}</div></a>')
 
@@ -87,7 +106,7 @@ now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 nowiso = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SolidCraft PR status</title><style>.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
+<title>SolidCraft PR status</title><style>.fp{{display:inline-flex;align-items:center;gap:4px;font-size:13px;cursor:pointer}}.gh{{display:inline-flex;align-items:center;color:var(--mut);text-decoration:none;padding:4px}}.gh:hover{{color:var(--fg)}}.gh svg{{width:20px;height:20px;fill:currentColor}}.ar{{display:inline-flex;gap:5px;align-items:center;cursor:pointer;color:var(--mut);position:relative;outline:none}}.ar:hover::after,.ar:focus::after{{content:attr(data-tip);position:absolute;top:2em;left:0;z-index:20;width:280px;white-space:normal;font-size:12px;line-height:1.35;padding:7px 9px;border-radius:8px;background:var(--fg);color:var(--bg);box-shadow:0 4px 14px rgba(0,0,0,.25)}}
 :root{{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--fg:#1d2228;--mut:#667;--line:#e2e5ea;
 --green:#1f9d55;--teal:#0f8b8d;--blue:#2f6fde;--red:#d64545;--orange:#e07b14;--grey:#8a94a3}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#111418;--card:#1b2026;--fg:#e6e9ee;--mut:#9aa3ad;--line:#2a3038}}}}
@@ -109,13 +128,18 @@ td{{padding:6px 8px;border-top:1px solid var(--line)}}a{{color:var(--blue)}}h3{{
 </style></head><body class="recent">
 <header><h1>SolidCraft PRs</h1><label class="ar" tabindex="0" data-tip="Reloads this page every minute to show the latest published copy. It does not fetch new data from GitHub: the page itself is rebuilt on the server every 15 minutes."><input type="checkbox" id="ar"> Auto refresh</label><a class="btn" href="stats.html">Stats</a><a class="btn" href="https://tangency-labs.github.io/leaderboard/">Leaderboard</a>
 <button id="b14" class="on">Active 14 days ({active:,})</button><button id="ball">All open ({len(prs):,})</button>
-<input id="q" placeholder="Filter: author or title" size="22">
+<input id="q" placeholder="Filter: PR #, author or title" size="26"><label class="fp"><input type="checkbox" value="P0">P0</label><label class="fp"><input type="checkbox" value="P1">P1</label><label class="fp"><input type="checkbox" value="P2">P2</label><label class="fp"><input type="checkbox" value="P3">P3</label><label class="fp"><input type="checkbox" value="none">none</label><button id="fclear" type="button">Clear</button>
 <span class="upd">updated {now}<span class="ago" data-ts="{nowiso}"></span> · every 15 min</span><a class="gh" href="https://github.com/mkinney/craftydevs-dashboards" title="Source of these pages on GitHub" aria-label="Source of these pages on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header>
 <div class="board">{board}</div>
 <div class="wrap"><h3>Recently merged</h3><table>{mrows}</table></div>
 <script>
 const b=document.body,q=document.getElementById('q');
-function apply(){{const v=q.value.trim().toLowerCase();document.querySelectorAll('.card').forEach(c=>{{c.classList.toggle('hide',!!v&&!(c.dataset.who.includes(v)||c.dataset.t.includes(v)))}});
+const boxes=[...document.querySelectorAll('.fp input')],K='sc-board-filter';
+try{{const d=JSON.parse(localStorage.getItem(K)||'{{}}');if(d.q)q.value=d.q;(d.p||[]).forEach(v=>boxes.forEach(b=>{{if(b.value==v)b.checked=true}}))}}catch(e){{}}
+const u=new URLSearchParams(location.search);if(u.get('q')!==null)q.value=u.get('q');if(u.get('p')){{const ps=u.get('p').split(',');boxes.forEach(b=>b.checked=ps.includes(b.value))}}
+boxes.forEach(b=>b.onchange=()=>apply());document.getElementById('fclear').onclick=()=>{{q.value='';boxes.forEach(b=>b.checked=false);apply()}};
+function apply(){{const v=q.value.trim().toLowerCase(),ps=boxes.filter(b=>b.checked).map(b=>b.value);try{{localStorage.setItem(K,JSON.stringify({{q:q.value,p:ps}}))}}catch(e){{}}
+document.querySelectorAll('.card').forEach(c=>{{c.classList.toggle('hide',(!!v&&!(c.dataset.who.includes(v)||c.dataset.t.includes(v)))||(ps.length>0&&!ps.includes(c.dataset.p)))}});
 document.querySelectorAll('.col').forEach(col=>{{const n=[...col.querySelectorAll('.card')].filter(c=>getComputedStyle(c).display!=='none').length;col.querySelector('.n').textContent=n.toLocaleString()}});}}
 document.getElementById('b14').onclick=()=>{{b.classList.add('recent');b14.classList.add('on');ball.classList.remove('on');apply()}};
 document.getElementById('ball').onclick=()=>{{b.classList.remove('recent');ball.classList.add('on');b14.classList.remove('on');apply()}};
