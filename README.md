@@ -12,6 +12,8 @@ Live at [craftydevs.org](https://craftydevs.org/):
 | [CamCraft stats](https://craftydevs.org/camcraft/status/stats.html) | `camcraft_stats.py` | hourly | ~7 GraphQL points per run |
 | [SolidCraft PR board](https://craftydevs.org/solidcraft/status/) | `solidcraft_board.py` | every 15 minutes | ~3 GraphQL points per run |
 | [SolidCraft stats](https://craftydevs.org/solidcraft/status/stats.html) | `solidcraft_stats.py` | hourly | ~130 search calls, paced to stay under 30/minute (~6 min per run) |
+| [Compute](https://craftydevs.org/camcraft/status/compute.html) | `compute_page.py` | every 15 minutes | none (reads local samples) |
+| [craftydevs.org](https://craftydevs.org/) | `site/index.html` (static) | - | - |
 
 ## What the pages show
 
@@ -41,6 +43,7 @@ Each script reads two environment variables:
 | `camcraft_stats.py` | `CAMCRAFT_STATS_OUT` (`~/dashboards/camcraft/stats.html`) | `CAMCRAFT_STATS_DEST` |
 | `solidcraft_board.py` | `SOLIDCRAFT_BOARD_OUT` (`~/dashboards/solidcraft/index.html`) | `SOLIDCRAFT_BOARD_DEST` |
 | `solidcraft_stats.py` | `SOLIDCRAFT_STATS_OUT` (`~/dashboards/solidcraft/stats.html`) | `SOLIDCRAFT_STATS_DEST` |
+| `compute_page.py` | `COMPUTE_OUT` (`$COMPUTE_DATA/compute.html`) | none: copy it yourself (rsync) |
 
 The target is anything `rsync` accepts, usually `user@host:path` with an SSH key. See `crontab.example`.
 
@@ -51,3 +54,11 @@ To point a page at another repository, change the repository constant at the top
 MIT OR Apache-2.0, at your option (the same as SolidCraft): see `LICENSE-MIT` and `LICENSE-APACHE`.
 
 - `camcraft_issues.py`: CamCraft open issues by priority, with a keyword filter, priority and state checkboxes, and today's opened/closed counts (UTC). Settings: `CAMCRAFT_ISSUES_OUT`, `CAMCRAFT_ISSUES_DEST`.
+
+## Compute page
+
+`compute_page.py` builds an aggregate page of the machines and AI subscriptions that build, test and review CamCraft:
+how many machines are Busy (average CPU over the last hour 60 % or more), Working (15-60 %), Idle (under 15 %) or
+Offline, and each subscription as OK, Tight (80 % or more of its weekly limit used) or Out (97 % or more). It reads
+samples that other scripts collect (`COMPUTE_DATA`: `perf/<host>.tsv` and `subs.tsv`) and needs `COMPUTE_HOSTS`, the
+host names to count. The page shows no host names, addresses or account names, and the source holds none.
