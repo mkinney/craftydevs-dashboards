@@ -84,10 +84,8 @@ def bucket_sub(used):
     return "tight" if used >= 80 else "ok"
 
 
-COL = {"busy": "var(--blue)", "working": "var(--green)", "idle": "var(--grey)", "offline": "var(--red)",
-       "ok": "var(--green)", "tight": "var(--amber)", "out": "var(--red)", "unknown": "var(--grey)"}
-# usage-bar colour per subscription, in the order of `subs` (the stats graphs' series palette)
-SER = ["blue", "green", "purple", "orange", "grey"]
+COL = {"busy": "#2f6fde", "working": "#1f9d55", "idle": "#98a2b3", "offline": "#d64545",
+       "ok": "#1f9d55", "tight": "#d98a00", "out": "#d64545", "unknown": "#98a2b3"}
 LBL = {"busy": "Busy", "working": "Working", "idle": "Idle", "offline": "Offline",
        "ok": "OK", "tight": "Tight", "out": "Out", "unknown": "No data"}
 
@@ -96,20 +94,19 @@ cards = "".join(
     f'<div class="b"><span class="dot" style="background:{COL[k]}"></span><b>{rows[k]}</b><span>{LBL[k]}</span></div>'
     for k in ("busy", "working", "idle", "offline"))
 sub_html = ""
-for i, (name, used) in enumerate(subs):
+for name, used in subs:
     b = bucket_sub(used)
     pct = "-" if used is None else f"{used:.0f}% of the week used"
     w = 0 if used is None else max(0, min(100, used))
     sub_html += (f'<div class="s"><div class="sn"><span class="dot" style="background:{COL[b]}"></span>{html.escape(name)}'
                  f'<span class="tag" style="color:{COL[b]}">{LBL[b]}</span></div>'
-                 f'<div class="bar"><i style="width:{w:.0f}%;background:var(--{SER[i % len(SER)]})"></i></div><div class="mut">{pct}</div></div>')
+                 f'<div class="bar"><i style="width:{w:.0f}%;background:{COL[b]}"></i></div><div class="mut">{pct}</div></div>')
 day = f"{statistics.mean(day_avgs):.0f}%" if day_avgs else "-"
 updated = NOW.strftime("%Y-%m-%d %H:%M UTC")
 
 page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CamCraft compute</title><meta http-equiv="refresh" content="300"><style>
-:root{{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6eb;
---blue:#2f6fde;--green:#1f9d55;--orange:#e07b14;--purple:#6b4fd8;--grey:#8a94a3;--red:#d64545;--amber:#d98a00}}
+:root{{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6eb}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme=light]){{--bg:#0f1218;--card:#171b23;--fg:#e6e9ef;--mut:#98a2b3;--line:#2a303b}}}}
 :root[data-theme=dark]{{--bg:#0f1218;--card:#171b23;--fg:#e6e9ef;--mut:#98a2b3;--line:#2a303b}}
 body{{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}}
