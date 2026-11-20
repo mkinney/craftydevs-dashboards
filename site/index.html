@@ -4,14 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>craftydevs.org</title>
-<script>
-  // Theme: "light", "dark" or "auto" (follows the system). Saved per browser; works without storage too.
-  (function () {
-    var t = "auto";
-    try { t = localStorage.getItem("theme") || "auto"; } catch (e) {}
-    if (t !== "auto") document.documentElement.setAttribute("data-theme", t);
-  })();
-</script>
 <style>
   :root {
     --bg: #f5f6f8; --bg2: #e9ecf2; --card: #ffffff; --fg: #1b2230; --mut: #5d6779; --line: #dde1e8;
@@ -19,97 +11,69 @@
     --sc: #2f6fde; --cc: #d9822b;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
+    :root {
       --bg: #0f1218; --bg2: #151b25; --card: #171c25; --fg: #e7eaf0; --mut: #98a2b3; --line: #2a313d;
       --hover: #1f2631; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
       --sc: #6ea1ff; --cc: #f0a35a;
     }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0f1218; --bg2: #151b25; --card: #171c25; --fg: #e7eaf0; --mut: #98a2b3; --line: #2a313d;
-    --hover: #1f2631; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-    --sc: #6ea1ff; --cc: #f0a35a;
   }
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: var(--fg);
          background: radial-gradient(1200px 600px at 50% -10%, var(--bg2), var(--bg)); background-color: var(--bg);
          font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
   main { width: 100%; max-width: 560px; padding: 3rem 16px; }
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  header { margin-bottom: 2rem; text-align: center; }
   h1 { font-size: 1.5rem; font-weight: 650; letter-spacing: .01em; margin: 0; }
-  .card { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1rem;
+  .card { display: block; padding: 1.25rem 1.4rem; margin-bottom: 1rem;
           background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
           border-left: 4px solid var(--accent); }
   .card.sc { --accent: var(--sc); } .card.cc { --accent: var(--cc); }
-  .info { flex: 1; min-width: 0; }
-  .info a { color: var(--fg); text-decoration: none; font-size: 1.2rem; font-weight: 650; }
-  .info a:hover, .info a:focus-visible { color: var(--accent); }
-  .info p { margin: .15rem 0 0; color: var(--mut); font-size: .92rem; }
-  .icons { display: flex; gap: .5rem; }
-  .icon { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 10px;
-          color: var(--mut); border: 1px solid var(--line); transition: background .15s, color .15s; }
-  .icon:hover, .icon:focus-visible { background: var(--hover); color: var(--accent); }
-  .icon svg { width: 1.25rem; height: 1.25rem; fill: currentColor; }
-  .theme { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
-  .theme button { border: 0; background: none; color: var(--mut); font: inherit; font-size: .8rem; padding: .35rem .7rem; cursor: pointer; }
-  .theme button[aria-pressed="true"] { background: var(--hover); color: var(--fg); font-weight: 600; }
+  .card h2 { margin: 0; font-size: 1.25rem; font-weight: 650; color: var(--accent); }
+  .card p { margin: .4rem 0 1rem; color: var(--mut); font-size: .95rem; }
+  .buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: .45rem; padding: .5rem .9rem; border-radius: 10px;
+         color: var(--fg); text-decoration: none; font-size: .92rem; border: 1px solid var(--line);
+         transition: background .15s, border-color .15s, color .15s; }
+  .btn:hover, .btn:focus-visible { background: var(--hover); border-color: var(--accent); color: var(--accent); }
+  .btn svg { width: 1rem; height: 1rem; fill: currentColor; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover, .btn.primary:focus-visible { filter: brightness(1.08); color: #fff; }
   footer { margin-top: 2rem; text-align: center; color: var(--mut); font-size: .8rem; }
   footer a { color: inherit; }
-  @media (max-width: 420px) { .card { flex-wrap: wrap; } .icons { width: 100%; } }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="gh" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="web" viewBox="0 0 16 16"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm5.9 7.25h-2.66a12.4 12.4 0 00-1.05-4.9 6.52 6.52 0 013.71 4.9zM8 1.6c.6.8 1.6 2.6 1.74 5.65H6.26C6.4 4.2 7.4 2.4 8 1.6zM5.81 2.35a12.4 12.4 0 00-1.05 4.9H2.1a6.52 6.52 0 013.71-4.9zM2.1 8.75h2.66c.1 1.9.47 3.55 1.05 4.9a6.52 6.52 0 01-3.71-4.9zM8 14.4c-.6-.8-1.6-2.6-1.74-5.65h3.48C9.6 11.8 8.6 13.6 8 14.4zm2.19-.75c.58-1.35.95-3 1.05-4.9h2.66a6.52 6.52 0 01-3.71 4.9z"/></symbol>
   <symbol id="dash" viewBox="0 0 16 16"><path d="M1 14h14v1.5H1zM2 9h2.5v4H2zm4.25-4h2.5v8h-2.5zM10.5 7H13v6h-2.5zM11.75 1.5 14.5 4.25l-1.06 1.06-1.69-1.69L9 6.37 6.5 3.87 3.06 7.31 2 6.25l4.5-4.5L9 4.25z"/></symbol>
 </svg>
 <main>
   <header>
     <h1>craftydevs.org</h1>
-    <div class="theme" role="group" aria-label="Colour theme">
-      <button type="button" data-t="light">Light</button><button type="button" data-t="auto">Auto</button><button type="button" data-t="dark">Dark</button>
-    </div>
   </header>
 
-  <div class="card sc">
-    <div class="info">
-      <a href="https://solidcraft.io/">SolidCraft</a>
-      <p>Parametric 3D CAD</p>
+  <section class="card sc">
+    <h2>SolidCraft</h2>
+    <p>An open-source parametric 3D CAD application written in Rust. Sketch, constrain and build solid parts on the desktop or in the browser, and automate it through its MCP server.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://solidcraft.io/"><svg aria-hidden="true"><use href="#web"/></svg>Website</a>
+      <a class="btn" href="https://github.com/tangency-labs/solidcraft"><svg aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+      <a class="btn" href="/solidcraft/status/"><svg aria-hidden="true"><use href="#dash"/></svg>Dashboard</a>
     </div>
-    <div class="icons">
-      <a class="icon" href="https://github.com/tangency-labs/solidcraft" title="SolidCraft on GitHub" aria-label="SolidCraft on GitHub"><svg aria-hidden="true"><use href="#gh"/></svg></a>
-      <a class="icon" href="/solidcraft/status/" title="SolidCraft dashboard" aria-label="SolidCraft dashboard"><svg aria-hidden="true"><use href="#dash"/></svg></a>
-    </div>
-  </div>
+  </section>
 
-  <div class="card cc">
-    <div class="info">
-      <a href="https://neotech.github.io/Camcraft/">CamCraft</a>
-      <p>CAM: 3D models to G-code for CNC machines</p>
+  <section class="card cc">
+    <h2>CamCraft</h2>
+    <p>An open-source, clean-room CAM package written in Rust. It turns 3D models into checked G-code for CNC mills, lathes, plasma and wire EDM, and refuses a toolpath it cannot prove safe.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://neotech.github.io/Camcraft/"><svg aria-hidden="true"><use href="#web"/></svg>Website</a>
+      <a class="btn" href="https://github.com/NeoTech/Camcraft"><svg aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+      <a class="btn" href="/camcraft/status/"><svg aria-hidden="true"><use href="#dash"/></svg>Dashboard</a>
     </div>
-    <div class="icons">
-      <a class="icon" href="https://github.com/NeoTech/Camcraft" title="CamCraft on GitHub" aria-label="CamCraft on GitHub"><svg aria-hidden="true"><use href="#gh"/></svg></a>
-      <a class="icon" href="/camcraft/status/" title="CamCraft dashboard" aria-label="CamCraft dashboard"><svg aria-hidden="true"><use href="#dash"/></svg></a>
-    </div>
-  </div>
+  </section>
 
   <footer>Open-source CAD/CAM · <a href="https://github.com/mkinney/craftydevs-dashboards">dashboard source</a></footer>
 </main>
-<script>
-  (function () {
-    var root = document.documentElement, btns = document.querySelectorAll(".theme button");
-    function cur() { try { return localStorage.getItem("theme") || "auto"; } catch (e) { return root.getAttribute("data-theme") || "auto"; } }
-    function show(t) { btns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.t === t)); }); }
-    btns.forEach(function (b) {
-      b.addEventListener("click", function () {
-        var t = b.dataset.t;
-        if (t === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", t);
-        try { localStorage.setItem("theme", t); } catch (e) {}
-        show(t);
-      });
-    });
-    show(cur());
-  })();
-</script>
 </body>
 </html>
