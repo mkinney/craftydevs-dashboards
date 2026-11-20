@@ -1,3 +1,5 @@
 __pycache__/
 *.tmp
 *.html
+!site/index.html
+__pycache__/
