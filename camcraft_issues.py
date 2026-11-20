@@ -125,7 +125,7 @@ closed_list = "".join(
 pchecks = "".join(f'<label class="fp" title="{esc(PDESC[p])}"><input type="checkbox" value="{esc(p)}">{esc(p)}</label>' for p in PRIOS)
 schecks = "".join(f'<label class="fs" title="{esc(t)}"><input type="checkbox" value="{s}">{s}</label>' for s, t in STATES)
 now = dt.datetime.now(dt.timezone.utc)
-page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CamCraft issues</title><style>
 :root{{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6eb;--acc:#2f6fde}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme=light]){{--bg:#0f1218;--card:#171b23;--fg:#e6e9ef;--mut:#98a2b3;--line:#2a303b;--acc:#6ea0ff}}}}
@@ -146,10 +146,11 @@ header{{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline}}h1{{margin:0;
 .tag{{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--mut)}}.tag.agent{{font-size:11px}}
 details{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0}}details li{{margin:2px 0}}
 .gh svg{{width:20px;height:20px;fill:var(--mut)}}
+:root[data-theme=light]{{color-scheme:light}}:root[data-theme=dark]{{color-scheme:dark}}.theme{{display:inline-flex;flex:0 0 auto;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}}.theme button{{margin:0;padding:3px 9px;border:0;border-radius:0;background:transparent;color:var(--mut);font:inherit;font-size:12px;cursor:pointer}}.theme button+button{{border-left:1px solid var(--line)}}.theme button:hover{{color:var(--fg)}}.theme button[aria-pressed=true]{{background:var(--fg);color:var(--bg)}}.theme.r{{margin-left:auto}}
 </style></head><body><main>
 <header><h1>CamCraft issues</h1><a href="./">PR board</a><a href="stats.html">Stats</a>
 <span class="mut">updated {now:%Y-%m-%d %H:%M} UTC (every 5 minutes)</span>
-<a class="gh" href="https://github.com/NeoTech/Camcraft/issues" aria-label="Issues on GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a></header>
+<a class="gh" href="https://github.com/NeoTech/Camcraft/issues" aria-label="Issues on GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a><span class="theme r" role="group" aria-label="Colour theme" data-theme-switch><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="auto" aria-pressed="true">Auto</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></span></header>
 <div class="kpis">{"".join(f"<div><b>{n:,}</b><span>{esc(t)}</span></div>" for n, t in kpis)}</div>
 <details><summary>Issues closed today (UTC): {len(closed_today)}</summary><ul>{closed_list or "<li class='mut'>none yet</li>"}</ul></details>
 <div class="bar"><input id="fq" type="search" placeholder="Filter: #number, words in the title, author, assignee, label" aria-label="Filter issues">{pchecks}</div>
@@ -168,7 +169,7 @@ try{{const v=JSON.parse(localStorage.getItem(K)||'null');if(v){{q.value=v.q||'';
 const u=new URLSearchParams(location.search);if(u.get('q')!==null)q.value=u.get('q');if(u.get('p'))PB.forEach(b=>b.checked=u.get('p').split(',').includes(b.value));
 document.getElementById('fclear').onclick=()=>{{q.value='';PB.concat(SB).forEach(b=>b.checked=false);f()}};
 q.addEventListener('input',f);PB.concat(SB).forEach(x=>x.addEventListener('change',f));f();
-</script></body></html>"""
+</script><script>(function(){{var r=document.documentElement,bs=[].slice.call(document.querySelectorAll(".theme button"));function cur(){{var v=r.getAttribute("data-theme");return v==="light"||v==="dark"?v:"auto"}}function show(){{var c=cur();bs.forEach(function(b){{b.setAttribute("aria-pressed",b.getAttribute("data-t")===c?"true":"false")}})}}bs.forEach(function(b){{b.addEventListener("click",function(){{var v=b.getAttribute("data-t");if(v==="auto"){{r.removeAttribute("data-theme");try{{localStorage.removeItem("theme")}}catch(e){{}}}}else{{r.setAttribute("data-theme",v);try{{localStorage.setItem("theme",v)}}catch(e){{}}}}show()}})}});show()}})();</script></body></html>"""
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT + ".tmp", "w").write(page)
 os.replace(OUT + ".tmp", OUT)

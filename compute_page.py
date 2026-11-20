@@ -84,8 +84,10 @@ def bucket_sub(used):
     return "tight" if used >= 80 else "ok"
 
 
-COL = {"busy": "#2f6fde", "working": "#1f9d55", "idle": "#98a2b3", "offline": "#d64545",
-       "ok": "#1f9d55", "tight": "#d98a00", "out": "#d64545", "unknown": "#98a2b3"}
+COL = {"busy": "var(--blue)", "working": "var(--green)", "idle": "var(--grey)", "offline": "var(--red)",
+       "ok": "var(--green)", "tight": "var(--amber)", "out": "var(--red)", "unknown": "var(--grey)"}
+# usage-bar colour per subscription, in the order of `subs` (the stats graphs' series palette)
+SER = ["blue", "green", "purple", "orange", "grey"]
 LBL = {"busy": "Busy", "working": "Working", "idle": "Idle", "offline": "Offline",
        "ok": "OK", "tight": "Tight", "out": "Out", "unknown": "No data"}
 
@@ -94,19 +96,20 @@ cards = "".join(
     f'<div class="b"><span class="dot" style="background:{COL[k]}"></span><b>{rows[k]}</b><span>{LBL[k]}</span></div>'
     for k in ("busy", "working", "idle", "offline"))
 sub_html = ""
-for name, used in subs:
+for i, (name, used) in enumerate(subs):
     b = bucket_sub(used)
     pct = "-" if used is None else f"{used:.0f}% of the week used"
     w = 0 if used is None else max(0, min(100, used))
     sub_html += (f'<div class="s"><div class="sn"><span class="dot" style="background:{COL[b]}"></span>{html.escape(name)}'
                  f'<span class="tag" style="color:{COL[b]}">{LBL[b]}</span></div>'
-                 f'<div class="bar"><i style="width:{w:.0f}%;background:{COL[b]}"></i></div><div class="mut">{pct}</div></div>')
+                 f'<div class="bar"><i style="width:{w:.0f}%;background:var(--{SER[i % len(SER)]})"></i></div><div class="mut">{pct}</div></div>')
 day = f"{statistics.mean(day_avgs):.0f}%" if day_avgs else "-"
 updated = NOW.strftime("%Y-%m-%d %H:%M UTC")
 
-page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><script>try{{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CamCraft compute</title><meta http-equiv="refresh" content="300"><style>
-:root{{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6eb}}
+:root{{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6eb;
+--blue:#2f6fde;--green:#1f9d55;--orange:#e07b14;--purple:#6b4fd8;--grey:#8a94a3;--red:#d64545;--amber:#d98a00}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme=light]){{--bg:#0f1218;--card:#171b23;--fg:#e6e9ef;--mut:#98a2b3;--line:#2a303b}}}}
 :root[data-theme=dark]{{--bg:#0f1218;--card:#171b23;--fg:#e6e9ef;--mut:#98a2b3;--line:#2a303b}}
 body{{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}}
@@ -116,14 +119,15 @@ main{{max-width:760px;margin:0 auto;padding:24px 16px}} h1{{font-size:22px;margi
 .b{{display:flex;align-items:center;gap:8px}} .b b{{font-size:22px}} .dot{{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}}
 .s{{margin:12px 0}} .sn{{display:flex;align-items:center;gap:8px;font-weight:600}} .tag{{margin-left:auto;font-size:13px}}
 .bar{{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:6px 0 2px}} .bar i{{display:block;height:100%}}
+:root[data-theme=light]{{color-scheme:light}}:root[data-theme=dark]{{color-scheme:dark}}.theme{{display:inline-flex;flex:0 0 auto;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}}.theme button{{margin:0;padding:3px 9px;border:0;border-radius:0;background:transparent;color:var(--mut);font:inherit;font-size:12px;cursor:pointer}}.theme button+button{{border-left:1px solid var(--line)}}.theme button:hover{{color:var(--fg)}}.theme button[aria-pressed=true]{{background:var(--fg);color:var(--bg)}}.theme.r{{margin-left:auto}}
 </style></head><body><main>
-<nav class="mut" style="margin-bottom:8px"><a href="./">CamCraft PRs</a> · <a href="issues.html">Issues</a> · <a href="stats.html">Stats</a> · <a href="/">craftydevs.org</a></nav><h1>CamCraft compute</h1><div class="mut">The machines and AI subscriptions that build, test and review CamCraft. Updated {updated}; refreshes every 5 minutes.</div>
+<header style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px"><nav class="mut"><a href="./">CamCraft PRs</a> · <a href="issues.html">Issues</a> · <a href="stats.html">Stats</a> · <a href="/">craftydevs.org</a></nav><span class="theme r" role="group" aria-label="Colour theme" data-theme-switch><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="auto" aria-pressed="true">Auto</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></span></header><h1>CamCraft compute</h1><div class="mut">The machines and AI subscriptions that build, test and review CamCraft. Updated {updated}; refreshes every 5 minutes.</div>
 <h2>Machines ({machines}, {cores} CPU cores online)</h2>
 <div class="card"><div class="grid">{cards}</div>
 <div class="mut" style="margin-top:12px">Per machine, average CPU over the last hour: Busy 60% or more, Working 15-60%, Idle under 15%. Average over 24 hours: {day}.</div></div>
 <h2>AI subscriptions</h2><div class="card">{sub_html}
 <div class="mut">OK: on pace for the week. Tight: 80% or more of the weekly limit used. Out: the weekly limit is reached until its reset.</div></div>
-</main></body></html>"""
+</main><script>(function(){{var r=document.documentElement,bs=[].slice.call(document.querySelectorAll(".theme button"));function cur(){{var v=r.getAttribute("data-theme");return v==="light"||v==="dark"?v:"auto"}}function show(){{var c=cur();bs.forEach(function(b){{b.setAttribute("aria-pressed",b.getAttribute("data-t")===c?"true":"false")}})}}bs.forEach(function(b){{b.addEventListener("click",function(){{var v=b.getAttribute("data-t");if(v==="auto"){{r.removeAttribute("data-theme");try{{localStorage.removeItem("theme")}}catch(e){{}}}}else{{r.setAttribute("data-theme",v);try{{localStorage.setItem("theme",v)}}catch(e){{}}}}show()}})}});show()}})();</script></body></html>"""
 out = os.path.expanduser(os.environ.get("COMPUTE_OUT", os.path.join(D, "compute.html")))
 with open(out + ".tmp", "w") as f:
     f.write(page)
