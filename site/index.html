@@ -4,19 +4,58 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>craftydevs.org</title>
+<script>
+  // Theme: "light", "dark" or "auto" (follows the system). Saved per browser; works without storage too.
+  (function () {
+    var t = "auto";
+    try { t = localStorage.getItem("theme") || "auto"; } catch (e) {}
+    if (t !== "auto") document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
 <style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; min-height: 100vh;
-         display: grid; place-items: center; background: Canvas; color: CanvasText; }
-  main { text-align: center; padding: 2rem 1rem; }
-  h1 { font-weight: 600; letter-spacing: .02em; margin: 0 0 2rem; }
-  section { margin: 0 0 2.5rem; }
-  .row { display: flex; gap: .75rem; align-items: center; justify-content: center; flex-wrap: wrap; }
-  a { color: inherit; text-decoration: none; border: 1px solid currentColor; border-radius: .5rem; }
-  a:hover, a:focus-visible { background: color-mix(in srgb, CanvasText 10%, transparent); }
-  a.name { display: inline-block; min-width: 9rem; padding: .75rem 1.5rem; font-size: 1.1rem; }
-  a.icon { display: inline-grid; place-items: center; width: 2.9rem; height: 2.9rem; }
-  a.icon svg { width: 1.4rem; height: 1.4rem; fill: currentColor; }
+  :root {
+    --bg: #f5f6f8; --bg2: #e9ecf2; --card: #ffffff; --fg: #1b2230; --mut: #5d6779; --line: #dde1e8;
+    --hover: #f0f2f6; --shadow: 0 1px 2px rgba(20,30,50,.06), 0 8px 24px rgba(20,30,50,.06);
+    --sc: #2f6fde; --cc: #d9822b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218; --bg2: #151b25; --card: #171c25; --fg: #e7eaf0; --mut: #98a2b3; --line: #2a313d;
+      --hover: #1f2631; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+      --sc: #6ea1ff; --cc: #f0a35a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --bg2: #151b25; --card: #171c25; --fg: #e7eaf0; --mut: #98a2b3; --line: #2a313d;
+    --hover: #1f2631; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --sc: #6ea1ff; --cc: #f0a35a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; color: var(--fg);
+         background: radial-gradient(1200px 600px at 50% -10%, var(--bg2), var(--bg)); background-color: var(--bg);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: 100%; max-width: 560px; padding: 3rem 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  h1 { font-size: 1.5rem; font-weight: 650; letter-spacing: .01em; margin: 0; }
+  .card { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; margin-bottom: 1rem;
+          background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+          border-left: 4px solid var(--accent); }
+  .card.sc { --accent: var(--sc); } .card.cc { --accent: var(--cc); }
+  .info { flex: 1; min-width: 0; }
+  .info a { color: var(--fg); text-decoration: none; font-size: 1.2rem; font-weight: 650; }
+  .info a:hover, .info a:focus-visible { color: var(--accent); }
+  .info p { margin: .15rem 0 0; color: var(--mut); font-size: .92rem; }
+  .icons { display: flex; gap: .5rem; }
+  .icon { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 10px;
+          color: var(--mut); border: 1px solid var(--line); transition: background .15s, color .15s; }
+  .icon:hover, .icon:focus-visible { background: var(--hover); color: var(--accent); }
+  .icon svg { width: 1.25rem; height: 1.25rem; fill: currentColor; }
+  .theme { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
+  .theme button { border: 0; background: none; color: var(--mut); font: inherit; font-size: .8rem; padding: .35rem .7rem; cursor: pointer; }
+  .theme button[aria-pressed="true"] { background: var(--hover); color: var(--fg); font-weight: 600; }
+  footer { margin-top: 2rem; text-align: center; color: var(--mut); font-size: .8rem; }
+  footer a { color: inherit; }
+  @media (max-width: 420px) { .card { flex-wrap: wrap; } .icons { width: 100%; } }
 </style>
 </head>
 <body>
@@ -25,23 +64,52 @@
   <symbol id="dash" viewBox="0 0 16 16"><path d="M1 14h14v1.5H1zM2 9h2.5v4H2zm4.25-4h2.5v8h-2.5zM10.5 7H13v6h-2.5zM11.75 1.5 14.5 4.25l-1.06 1.06-1.69-1.69L9 6.37 6.5 3.87 3.06 7.31 2 6.25l4.5-4.5L9 4.25z"/></symbol>
 </svg>
 <main>
-  <h1>craftydevs.org</h1>
+  <header>
+    <h1>craftydevs.org</h1>
+    <div class="theme" role="group" aria-label="Colour theme">
+      <button type="button" data-t="light">Light</button><button type="button" data-t="auto">Auto</button><button type="button" data-t="dark">Dark</button>
+    </div>
+  </header>
 
-  <section>
-    <div class="row">
-      <a class="name" href="https://solidcraft.io/">SolidCraft</a>
+  <div class="card sc">
+    <div class="info">
+      <a href="https://solidcraft.io/">SolidCraft</a>
+      <p>Parametric 3D CAD</p>
+    </div>
+    <div class="icons">
       <a class="icon" href="https://github.com/tangency-labs/solidcraft" title="SolidCraft on GitHub" aria-label="SolidCraft on GitHub"><svg aria-hidden="true"><use href="#gh"/></svg></a>
       <a class="icon" href="/solidcraft/status/" title="SolidCraft dashboard" aria-label="SolidCraft dashboard"><svg aria-hidden="true"><use href="#dash"/></svg></a>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <div class="row">
-      <a class="name" href="https://neotech.github.io/Camcraft/">CamCraft</a>
+  <div class="card cc">
+    <div class="info">
+      <a href="https://neotech.github.io/Camcraft/">CamCraft</a>
+      <p>CAM: 3D models to G-code for CNC machines</p>
+    </div>
+    <div class="icons">
       <a class="icon" href="https://github.com/NeoTech/Camcraft" title="CamCraft on GitHub" aria-label="CamCraft on GitHub"><svg aria-hidden="true"><use href="#gh"/></svg></a>
       <a class="icon" href="/camcraft/status/" title="CamCraft dashboard" aria-label="CamCraft dashboard"><svg aria-hidden="true"><use href="#dash"/></svg></a>
     </div>
-  </section>
+  </div>
+
+  <footer>Open-source CAD/CAM · <a href="https://github.com/mkinney/craftydevs-dashboards">dashboard source</a></footer>
 </main>
+<script>
+  (function () {
+    var root = document.documentElement, btns = document.querySelectorAll(".theme button");
+    function cur() { try { return localStorage.getItem("theme") || "auto"; } catch (e) { return root.getAttribute("data-theme") || "auto"; } }
+    function show(t) { btns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.t === t)); }); }
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = b.dataset.t;
+        if (t === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", t);
+        try { localStorage.setItem("theme", t); } catch (e) {}
+        show(t);
+      });
+    });
+    show(cur());
+  })();
+</script>
 </body>
 </html>
