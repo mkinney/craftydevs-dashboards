@@ -118,6 +118,47 @@ kpis = [
     (len(prs_open), f"open PRs ({sum(1 for p in prs_open if p['isDraft'])} drafts)"),
     (len(prs_closed_today), f"PRs closed today ({merged_today} merged)"),
 ]
+# Summary (user 2026-11-22: "create issues summary on dashboard"): priority x state, effort of the free ones,
+# and today's flow per priority. Each count links to the list below, filtered to that cell.
+SCOLS = [s for s, _ in STATES]
+EFFORTS = ["effort:low", "effort:medium", "effort:high", "effort:max"]
+
+
+def effort(i):
+    return next((x for x in labels(i) if x in EFFORTS), "none")
+
+
+def cell(n, p, s=None, cls=""):
+    if not n:
+        return f'<td class="n z">0</td>'
+    q = f"?p={p}" + (f"&s={s}" if s else "")
+    return f'<td class="n {cls}"><a href="{esc(q)}">{n}</a></td>'
+
+
+srows = []
+for p in PRIOS:
+    mine = [i for i in open_issues if prio(i) == p]
+    op = sum(1 for i in opened_today if prio(i) == p)
+    cl = sum(1 for i in closed_today if prio(i) == p)
+    if not (mine or op or cl):
+        continue
+    free = [i for i in mine if state(i) == "free"]
+    eff = " · ".join(f"{sum(1 for i in free if effort(i) == e)} {e[7:]}" for e in EFFORTS if any(effort(i) == e for i in free))
+    srows.append(f'<tr><th><span class="pill p-{esc(p).replace("?", "q")}" title="{esc(PDESC[p])}">{esc(p)}</span></th>'
+                 + "".join(cell(sum(1 for i in mine if state(i) == s), p, s, "free" if s == "free" else "") for s in SCOLS)
+                 + cell(len(mine), p, None, "tot")
+                 + f'<td class="mut eff">{eff or "-"}</td><td class="n">+{op}</td><td class="n">&minus;{cl}</td></tr>')
+tot = lambda f: sum(1 for i in open_issues if f(i))
+srows.append('<tr class="sum"><th>All</th>' + "".join(f'<td class="n">{tot(lambda i, s=s: state(i) == s)}</td>' for s in SCOLS)
+             + f'<td class="n tot">{len(open_issues)}</td><td></td><td class="n">+{len(opened_today)}</td>'
+             f'<td class="n">&minus;{len(closed_today)}</td></tr>')
+summary = ('<h2>Summary</h2><div class="sumw"><table class="sumt"><thead><tr><th>Priority</th>'
+           + "".join(f'<th class="n" title="{esc(t)}">{esc(s)}</th>' for s, t in STATES)
+           + '<th class="n">open</th><th>free, by effort</th><th class="n" title="opened today (UTC)">opened today</th>'
+           '<th class="n" title="closed today (UTC)">closed today</th></tr></thead><tbody>' + "".join(srows)
+           + '</tbody></table></div><p class="mut" style="font-size:12px;margin:4px 0 0">A number opens the list below '
+           'filtered to that priority and state. P1-P3 are fix-now defects; agents pick the lowest number first, '
+           'within their effort tier.</p>')
 closed_list = "".join(
     f'<li><a href="{esc(i["url"])}">#{i["number"]}</a> {esc(i["title"])} <span class="mut">'
     f'{"not planned" if i.get("stateReason") == "NOT_PLANNED" else "completed"} · {ago(i["closedAt"])} ago</span></li>'
@@ -146,12 +187,14 @@ header{{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline}}h1{{margin:0;
 .tag{{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--mut)}}.tag.agent{{font-size:11px}}
 details{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0}}details li{{margin:2px 0}}
 .gh svg{{width:20px;height:20px;fill:var(--mut)}}
+.sumw{{overflow-x:auto}}.sumt{{border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;font-size:13px;min-width:640px;width:100%}}.sumt th,.sumt td{{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}}.sumt .n{{text-align:right;font-variant-numeric:tabular-nums}}.sumt .z{{color:var(--line)}}.sumt td.free a{{color:#1f9d55;font-weight:600}}.sumt .tot{{font-weight:600}}.sumt tr.sum td,.sumt tr.sum th{{font-weight:600;border-bottom:0}}.sumt .eff{{font-size:12px}}.sumt thead th{{color:var(--mut);font-weight:500;font-size:12px}}
 :root[data-theme=light]{{color-scheme:light}}:root[data-theme=dark]{{color-scheme:dark}}.theme{{display:inline-flex;flex:0 0 auto;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}}.theme button{{margin:0;padding:3px 9px;border:0;border-radius:0;background:transparent;color:var(--mut);font:inherit;font-size:12px;cursor:pointer}}.theme button+button{{border-left:1px solid var(--line)}}.theme button:hover{{color:var(--fg)}}.theme button[aria-pressed=true]{{background:var(--fg);color:var(--bg)}}.theme.r{{margin-left:auto}}
 </style></head><body><main>
 <header><h1>CamCraft issues</h1><a href="./">PR board</a><a href="stats.html">Stats</a>
 <span class="mut">updated {now:%Y-%m-%d %H:%M} UTC (every 5 minutes)</span>
 <a class="gh" href="https://github.com/NeoTech/Camcraft/issues" aria-label="Issues on GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a><span class="theme r" role="group" aria-label="Colour theme" data-theme-switch><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="auto" aria-pressed="true">Auto</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></span></header>
 <div class="kpis">{"".join(f"<div><b>{n:,}</b><span>{esc(t)}</span></div>" for n, t in kpis)}</div>
+{summary}
 <details><summary>Issues closed today (UTC): {len(closed_today)}</summary><ul>{closed_list or "<li class='mut'>none yet</li>"}</ul></details>
 <div class="bar"><input id="fq" type="search" placeholder="Filter: #number, words in the title, author, assignee, label" aria-label="Filter issues">{pchecks}</div>
 <div class="bar">{schecks}<button id="fclear" type="button">Clear</button><span id="fcount" class="mut"></span></div>
@@ -166,7 +209,7 @@ function f(){{const t=q.value.trim().toLowerCase().split(/\\s+/).filter(Boolean)
  document.getElementById('fcount').textContent=(t.length||P.length||S.length)?` showing ${{n}} of ${{all}} issues`:'';
  try{{localStorage.setItem(K,JSON.stringify({{q:q.value,P,S}}))}}catch(e){{}}}}
 try{{const v=JSON.parse(localStorage.getItem(K)||'null');if(v){{q.value=v.q||'';PB.forEach(b=>b.checked=(v.P||[]).includes(b.value));SB.forEach(b=>b.checked=(v.S||[]).includes(b.value))}}}}catch(e){{}}
-const u=new URLSearchParams(location.search);if(u.get('q')!==null)q.value=u.get('q');if(u.get('p'))PB.forEach(b=>b.checked=u.get('p').split(',').includes(b.value));
+const u=new URLSearchParams(location.search);if(u.get('q')!==null)q.value=u.get('q');if(u.get('p'))PB.forEach(b=>b.checked=u.get('p').split(',').includes(b.value));if(u.get('p')||u.get('s'))SB.forEach(b=>b.checked=(u.get('s')||'').split(',').includes(b.value));
 document.getElementById('fclear').onclick=()=>{{q.value='';PB.concat(SB).forEach(b=>b.checked=false);f()}};
 q.addEventListener('input',f);PB.concat(SB).forEach(x=>x.addEventListener('change',f));f();
 </script><script>(function(){{var r=document.documentElement,bs=[].slice.call(document.querySelectorAll(".theme button"));function cur(){{var v=r.getAttribute("data-theme");return v==="light"||v==="dark"?v:"auto"}}function show(){{var c=cur();bs.forEach(function(b){{b.setAttribute("aria-pressed",b.getAttribute("data-t")===c?"true":"false")}})}}bs.forEach(function(b){{b.addEventListener("click",function(){{var v=b.getAttribute("data-t");if(v==="auto"){{r.removeAttribute("data-theme");try{{localStorage.removeItem("theme")}}catch(e){{}}}}else{{r.setAttribute("data-theme",v);try{{localStorage.setItem("theme",v)}}catch(e){{}}}}show()}})}});show()}})();</script></body></html>"""

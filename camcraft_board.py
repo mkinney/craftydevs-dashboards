@@ -42,7 +42,7 @@ def esc(s):
 
 
 prs = gh("pr", "list", "-R", R, "--state", "open", "--limit", "300", "--json",
-         "number,title,author,isDraft,labels,mergeable,headRefOid,createdAt,updatedAt,reviews,comments,url,baseRefName,statusCheckRollup,closingIssuesReferences")
+         "number,title,author,isDraft,labels,mergeable,headRefOid,createdAt,updatedAt,reviews,comments,url,baseRefName,statusCheckRollup,closingIssuesReferences,files")
 PRIOS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P?"]
 try:
     _iss = gh("issue", "list", "-R", R, "--state", "all", "--limit", "1500", "--search", "sort:updated-desc",
@@ -118,18 +118,32 @@ for p in prs:
 kind = lambda t: (t.split("(")[0].split(":")[0].rstrip("!") or "?")
 
 
+def maint_why(p):
+    """Short reason a needs-maintainer PR waits, from the files it changes."""
+    fs = [f.get("path", "") for f in p.get("files") or []]
+    why = []
+    if any(f in ("Cargo.toml", "Cargo.lock") or f.endswith("/Cargo.toml") for f in fs):
+        why.append("dependencies")
+    if any(f.startswith((".github/", "scripts/", "aur/")) or f.endswith("build.rs") for f in fs):
+        why.append("build/scripts")
+    return " + ".join(dict.fromkeys(why)) or "design call"
+
+
 def card(p):
     L = labels(p)
     t = p["title"]
     feat = kind(t) == "feat"
     pills = []
     if feat:
-        pills.append('<span class="pill grey">feat · at cut</span>')
+        pills.append('<span class="pill grey" title="merges when clean, after the post-merge runs (Sarge OK 2026-11-20)">feat</span>')
     if p.get("mergeable") == "CONFLICTING":
         pills.append('<span class="pill orange">conflicting</span>')
+    if "needs-maintainer" in L:
+        why = maint_why(p)
+        pills.append(f'<span class="pill yellow" title="The maintainer decides before a review or merge (needs-maintainer)">maintainer decision: {esc(why)}</span>')
     if reviewed(p):
         pills.append('<span class="pill green">reviewed head</span>')
-    elif not p["isDraft"]:
+    elif not p["isDraft"] and "needs-maintainer" not in L:
         pills.append('<span class="pill blue">review pending</span>')
     # agent/* commit statuses: the shared "someone is working on this" sign (both coordinators can set them)
     for st in p.get("statusCheckRollup") or []:
@@ -172,12 +186,6 @@ def strip():
     if h:
         ok = h.get("state") == "GREEN"
         out.append(f'<span class="main {"ok" if ok else "bad"}">main build check: <b>{"🟢 green" if ok else "🔴 red"}</b> on {esc(h.get("sha"))} · {ago(h.get("time"))} ago</span>')
-    t = ST.get("train") or {}
-    if t:
-        res = t.get("result", "")
-        icon = {"GREEN": "🟢", "RED": "🔴"}.get(res, "⚪")
-        prs_ = " ".join("#" + x for x in t.get("in", []))
-        out.append(f'<span class="main {"ok" if res == "GREEN" else ("bad" if res == "RED" else "run")}">last batch test: <b>{icon} {esc(res.lower())}</b> · {esc(prs_)} · {ago(t.get("time"))} ago</span>')
     if ST:
         d = ST.get("done_today", {})
         parts = " · ".join(f"{v} {k}{'s' if v != 1 else ''}" for k, v in sorted(d.items(), key=lambda kv: -kv[1]))
