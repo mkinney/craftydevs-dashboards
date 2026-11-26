@@ -103,7 +103,7 @@ for p in prs:
     L = labels(p)
     if p["isDraft"] and "needs-rework" not in L and "conflicts" not in L:
         k = "draft"
-    elif "needs-maintainer" in L:
+    elif "needs-maintainer" in L or "held-for-merge" in L:
         k = "maint"
     elif "needs-rework" in L:
         k = "rework"
@@ -114,6 +114,9 @@ for p in prs:
     else:
         k = "review"
     cols[k].append(p)
+
+# labels the board already shows (as a column or its own pill); every other PR label gets a grey pill
+SHOWN_LABELS = {"merge-ready", "needs-rework", "conflicts", "needs-maintainer", "held-for-merge", "waiting-for-user", "blocked"}
 
 kind = lambda t: (t.split("(")[0].split(":")[0].rstrip("!") or "?")
 
@@ -141,6 +144,17 @@ def card(p):
     if "needs-maintainer" in L:
         why = maint_why(p)
         pills.append(f'<span class="pill yellow" title="The maintainer decides before a review or merge (needs-maintainer)">maintainer decision: {esc(why)}</span>')
+    if "held-for-merge" in L:
+        pills.append('<span class="pill pink" title="The maintainer holds this PR: only he merges it (held-for-merge)">held for merge</span>')
+    if "waiting-for-user" in L:
+        pills.append('<span class="pill yellow" title="Waiting for the reporter or a tester to answer (waiting-for-user)">waiting for user</span>')
+    if "blocked" in L:
+        pills.append('<span class="pill red" title="Waiting on another issue or a decision (blocked)">blocked</span>')
+    for lab in p.get("labels", []):   # any other label: shown as-is, so no label is invisible on the board
+        n = lab.get("name") or ""
+        if n in SHOWN_LABELS or n in PRIOS or n.isdigit() or n.startswith(("area:", "effort:", "source:")):
+            continue
+        pills.append(f'<span class="pill grey" title="{esc(lab.get("description") or "label")}">{esc(n)}</span>')
     if reviewed(p):
         pills.append('<span class="pill green">reviewed head</span>')
     elif not p["isDraft"] and "needs-maintainer" not in L:
@@ -203,7 +217,7 @@ board = "".join(
 def bug_row(b):
     L = [l["name"] for l in b["labels"]]
     pr = next((x for x in L if x in ("P1", "P2", "P3")), "")
-    st = "in review" if "in-review" in L else ("claimed" if "claimed" in L else ("blocked" if "blocked" in L else "open"))
+    st = "in review" if "in-review" in L else ("claimed" if "claimed" in L else ("blocked" if "blocked" in L else ("waiting for user" if "waiting-for-user" in L else "open")))
     return (f'<tr class="bug" data-p="{pr}" data-k="{esc(("#" + str(b["number"]) + " " + " ".join(a["login"] for a in b.get("assignees", [])) + " " + b["title"]).lower())}">'
             f'<td><span class="pill {"red" if pr in ("P1","P2") else "orange"}">{pr}</span></td>'
             f'<td><a href="{esc(b["url"])}">#{b["number"]}</a> {esc(b["title"])}</td><td>{st}</td></tr>')
@@ -231,7 +245,7 @@ h1{{font-size:18px;margin:0 12px 0 0}}.upd{{color:var(--mut);margin-left:auto}}
 .card{{display:block;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px;text-decoration:none;color:var(--fg)}}
 .card:hover{{border-color:var(--blue)}}.num{{font-weight:600}}.who{{font-weight:400;color:var(--mut);font-size:12px}}.t{{margin:3px 0 6px}}
 .pills{{display:flex;flex-wrap:wrap;gap:4px}}.pill{{font-size:11px;padding:1px 7px;border-radius:9px;color:#fff}}
-.green{{background:var(--green)}}.blue{{background:var(--blue)}}.red{{background:var(--red)}}.orange{{background:var(--orange)}}.yellow{{background:var(--yellow)}}.grey{{background:var(--grey)}}.act{{background:#6b4fd8}}
+.green{{background:var(--green)}}.blue{{background:var(--blue)}}.red{{background:var(--red)}}.orange{{background:var(--orange)}}.yellow{{background:var(--yellow)}}.grey{{background:var(--grey)}}.pink{{background:#c2307f}}.act{{background:#6b4fd8}}
 .wrap{{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;padding:0 16px 24px}}
 table{{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}}
 td{{padding:6px 8px;border-top:1px solid var(--line);vertical-align:top}}a{{color:var(--blue)}}h3{{font-size:13px;color:var(--mut);margin:8px 0}}
